@@ -27,6 +27,57 @@ __global__ void calc_score_matrix(const float *query, const float *key, float *s
         sum += query_mat[IND(x, i, q_embed_dim)] * key_mat[IND(y, i, q_embed_dim)];
     }
     scores_mat[IND(x, y, seq_len)] = sum / sqrtf(q_embed_dim);
+}
+
+__global__ void softmax_scores(float *scores, int seq_len)
+{
+    int batch_ind = blockIdx.y;
+    int head_ind = blockIdx.z;
+    int num_heads = gridDim.z;
+    int row = blockIdx.x;
+    float *scores_mat = scores + (batch_ind * num_heads + head_ind) * seq_len * seq_len;
+
+    float tmp_max = -INFINITY;
+    float val;
+    if (threadIdx.x == 0)
+    {
+        for (int i = 0; i < seq_len; i++)
+        {
+            val = scores_mat[IND(row, i, seq_len)];
+            tmp_max = val > tmp_max ? val : tmp_max;
+        }
+    }
+    __shared__ float max = tmp_max;
+    __syncthreads();
+
+    int chunk_size = CEIL_DIV(seq_len, blockDim.x);
+    int range_start = chunk_size * blockIdx.x;
+    int range_end = range_start + chunk_size;
+    int range_end = range_end <= seq_len ? range_end : seq_len;
+    
+    for (int i = range_start; i < range_end; i++)
+    {
+        scores_mat[IND(row, i, seq_len)] = expf(scores_mat[IND(row, i, seq_len)] - max);
+    }
+
+    __syncthreads();
+
+    float tmp_sum = 0;
+    float val;
+    if (threadIdx.x == 0)
+    {
+        for (int i = 0; i < seq_len; i++)
+        {
+            tmp_sum += scores_mat[IND(row, i, seq_len)];
+        }
+    }
+    __shared__ float sum = tmp_sum;
+    __syncthreads();
+
+    for (int i = range_start; i < range_end; i++)
+    {
+        scores_mat[IND(row, i, seq_len)] = scores_mat[IND(row, i, seq_len)] / sum;
+    }
 
 }
 
@@ -43,10 +94,13 @@ torch::Tensor naive_attention(torch::Tensor query, torch::Tensor key, torch::Ten
 
     int num_blocks_per_score_mat = CEIL_DIV(seq_len * seq_len, 1024);
     dim3 threads_per_block(1024);
-    dim3 number_of_blocks(num_blocks_per_score_mat ,batch_size, num_heads);
-
+    dim3 number_of_blocks(num_blocks_per_score_mat, batch_size, num_heads);
     calc_score_matrix<<<number_of_blocks, threads_per_block>>>(
         query.data_ptr<float>(), key.data_ptr<float>(), scores.data_ptr<float>(), seq_len, q_embed_dim);
+
+    threads_per_block(1024);
+    number_of_blocks(seq_len, batch_size, num_heads);
+    softmax_scores(scores.data_ptr<float>(), seq_len);
 
     return scores;
 }
