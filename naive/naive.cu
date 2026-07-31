@@ -38,7 +38,6 @@ __global__ void softmax_scores(float *scores, int seq_len)
     float *scores_mat = scores + (batch_ind * num_heads + head_ind) * seq_len * seq_len;
     __shared__ float sum, max;
 
-
     float tmp_max = -INFINITY;
     float val;
     if (threadIdx.x == 0)
@@ -56,7 +55,7 @@ __global__ void softmax_scores(float *scores, int seq_len)
     int range_start = chunk_size * threadIdx.x;
     int range_end = range_start + chunk_size;
     range_end = range_end <= seq_len ? range_end : seq_len;
-    
+
     for (int i = range_start; i < range_end; i++)
     {
         scores_mat[IND(row, i, seq_len)] = expf(scores_mat[IND(row, i, seq_len)] - max);
@@ -79,7 +78,32 @@ __global__ void softmax_scores(float *scores, int seq_len)
     {
         scores_mat[IND(row, i, seq_len)] = scores_mat[IND(row, i, seq_len)] / sum;
     }
+}
 
+__global__ void calc_weighted_values_matrix(const float *scores, const float *value, float *result,
+                                            int seq_len, int v_embed_dim)
+{
+    int batch_ind = blockIdx.y;
+    int head_ind = blockIdx.z;
+    int num_heads = gridDim.z;
+    int start_offset = (batch_ind * num_heads + head_ind) * seq_len * v_embed_dim;
+    const float *value_mat = value + start_offset;
+    const float *scores_mat = scores + (batch_ind * num_heads + head_ind) * seq_len * seq_len;
+    const float *result_mat = result + start_offset;
+
+    int item_offset = blockIdx.x * blockDim.x + threadIdx.x;
+    if (item_offset >= seq_len * v_embded_dim)
+    {
+        return;
+    }
+    int x = item_offset % seq_len;
+    int y = item_offset / seq_len;
+    float sum = 0;
+    for (int i = 0; i < seq_len; i++)
+    {
+        sum += scores_mat[IND(x, i, seq_len)] * value_mat[IND(i, y, v_embed_dim)];
+    }
+    scores_mat[IND(x, y, v_embed_dim)] = sum;
 }
 
 torch::Tensor naive_attention(torch::Tensor query, torch::Tensor key, torch::Tensor value)
@@ -103,7 +127,12 @@ torch::Tensor naive_attention(torch::Tensor query, torch::Tensor key, torch::Ten
     dim3 softmax_number_of_blocks(seq_len, batch_size, num_heads);
     softmax_scores<<<softmax_number_of_blocks, softmax_threads_per_block>>>(scores.data_ptr<float>(), seq_len);
 
-    return scores;
+    int num_blocks_per_value_mat = CEIL_DIV(seq_len * v_embed_dir, 1024);
+    dim3 values_threads_per_block(1024);
+    dim3 values_number_of_blocks(num_blocks_per_value_mat, batch_size, num_heads);
+    calc_weighted_values_matrix<<<values_number_of_blocks, values_threads_per_block>>>(scores.data_ptr<float>(), value.data_ptr<float>(), result.data_ptr<float>(), seq_len, v_embed_dim);
+
+    return result;
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
