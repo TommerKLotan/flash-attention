@@ -101,7 +101,7 @@ torch::Tensor naive_attention(torch::Tensor query, torch::Tensor key, torch::Ten
 
     dim3 softmax_threads_per_block(1024);
     dim3 softmax_number_of_blocks(seq_len, batch_size, num_heads);
-    softmax_scores<<<softmax_number_of_blocks, softmax_threads_per_block>>>(scores.data_ptr<float>(), seq_len);
+    //softmax_scores<<<softmax_number_of_blocks, softmax_threads_per_block>>>(scores.data_ptr<float>(), seq_len);
 
     return scores;
 }
