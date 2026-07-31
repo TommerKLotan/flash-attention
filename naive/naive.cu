@@ -41,8 +41,9 @@ torch::Tensor naive_attention(torch::Tensor query, torch::Tensor key, torch::Ten
     auto scores = torch::empty({batch_size, num_heads, seq_len, seq_len}, query.options());
     auto result = torch::empty_like(value);
 
+    int num_blocks_per_score_mat = CEIL_DIV(seq_len * seq_len, 1024);
     dim3 threads_per_block(1024);
-    dim3 number_of_blocks(batch_size, num_heads);
+    dim3 number_of_blocks(num_blocks_per_score_mat ,batch_size, num_heads);
 
     calc_score_matrix<<<number_of_blocks, threads_per_block>>>(
         query.data_ptr<float>(), key.data_ptr<float>(), scores.data_ptr<float>(), seq_len, q_embed_dim);
