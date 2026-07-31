@@ -10,8 +10,8 @@ __global__ void calc_score_matrix(const float *query, const float *key, float *s
     int head_ind = blockIdx.z;
     int num_heads = gridDim.z;
     int start_offset = (batch_ind * num_heads + head_ind) * seq_len * q_embed_dim;
-    float *query_mat = query + start_offset;
-    float *key_mat = key + start_offset;
+    const float *query_mat = query + start_offset;
+    const float *key_mat = key + start_offset;
     float *scores_mat = scores + (batch_ind * num_heads + head_ind) * seq_len * seq_len;
 
     int item_offset = blockIdx.x * blockDim.x + threadIdx.x;
