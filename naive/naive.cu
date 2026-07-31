@@ -21,7 +21,7 @@ __global__ void calc_score_matrix(const float *query, const float *key, float *s
     }
     int x = item_offset % seq_len;
     int y = item_offset / seq_len;
-    int sum = 0;
+    float sum = 0;
     for (int i = 0; i < q_embed_dim; i++)
     {
         sum += query_mat[IND(x, i, q_embed_dim)] * key_mat[IND(y, i, q_embed_dim)];
