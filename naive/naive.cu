@@ -36,7 +36,7 @@ __global__ void softmax_scores(float *scores, int seq_len)
     int num_heads = gridDim.z;
     int row = blockIdx.x;
     float *scores_mat = scores + (batch_ind * num_heads + head_ind) * seq_len * seq_len;
-    __shared__ float sum, max;
+    __shared__ float sum, row_max;
 
     float tmp_max = -INFINITY;
     float val;
@@ -47,8 +47,8 @@ __global__ void softmax_scores(float *scores, int seq_len)
             val = scores_mat[IND(row, i, seq_len)];
             tmp_max = val > tmp_max ? val : tmp_max;
         }
+        row_max = tmp_max;
     }
-    max = tmp_max;
     __syncthreads();
 
     int chunk_size = CEIL_DIV(seq_len, blockDim.x);
@@ -58,7 +58,7 @@ __global__ void softmax_scores(float *scores, int seq_len)
 
     for (int i = range_start; i < range_end; i++)
     {
-        scores_mat[IND(row, i, seq_len)] = expf(scores_mat[IND(row, i, seq_len)] - max);
+        scores_mat[IND(row, i, seq_len)] = expf(scores_mat[IND(row, i, seq_len)] - row_max);
     }
 
     __syncthreads();
@@ -70,8 +70,8 @@ __global__ void softmax_scores(float *scores, int seq_len)
         {
             tmp_sum += scores_mat[IND(row, i, seq_len)];
         }
+        sum = tmp_sum;
     }
-    sum = tmp_sum;
     __syncthreads();
 
     for (int i = range_start; i < range_end; i++)
