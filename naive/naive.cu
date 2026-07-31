@@ -89,10 +89,10 @@ __global__ void calc_weighted_values_matrix(const float *scores, const float *va
     int start_offset = (batch_ind * num_heads + head_ind) * seq_len * v_embed_dim;
     const float *value_mat = value + start_offset;
     const float *scores_mat = scores + (batch_ind * num_heads + head_ind) * seq_len * seq_len;
-    const float *result_mat = result + start_offset;
+    float *result_mat = result + start_offset;
 
     int item_offset = blockIdx.x * blockDim.x + threadIdx.x;
-    if (item_offset >= seq_len * v_embded_dim)
+    if (item_offset >= seq_len * v_embed_dim)
     {
         return;
     }
