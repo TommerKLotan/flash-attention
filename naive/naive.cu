@@ -59,7 +59,7 @@ __global__ void softmax_scores(float *scores, int seq_len)
     
     for (int i = range_start; i < range_end; i++)
     {
-        scores_mat[IND(row, i, seq_len)] = expf(scores_mat[IND(row, i, seq_len)] - max);
+        scores_mat[IND(row, i, seq_len)] = 1;//expf(scores_mat[IND(row, i, seq_len)] - max);
     }
 
     __syncthreads();
