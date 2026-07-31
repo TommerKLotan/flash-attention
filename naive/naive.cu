@@ -10,9 +10,9 @@ __global__ void calc_score_matrix(const float *query, const float *key, float *s
     int head_ind = blockIdx.z;
     int num_heads = gridDim.z;
     int start_offset = (batch_ind * num_heads + head_ind) * seq_len * q_embed_dim;
-    float (*query_mat)[q_embed_dim] = query + start_offset;
+    float (*query_mat)[q_embed_dim] = (float (*)[q_embed_dim])(query + start_offset);
     float (*key_mat)[q_embed_dim] = key + start_offset;
-    float (*scores_mat)[seq_len] = (batch_ind * num_heads + head_ind) * seq_len * seq_len;
+    float (*scores_mat)[seq_len] = scores + (batch_ind * num_heads + head_ind) * seq_len * seq_len;
 
     int item_offset = blockIdx.x * blockDim.x + threadIdx.x;
     if (item_offset >= seq_len * seq_len)
@@ -45,7 +45,7 @@ torch::Tensor naive_attention(torch::Tensor query, torch::Tensor key, torch::Ten
     dim3 number_of_blocks(batch_size, num_heads);
 
     calc_score_matrix<<<number_of_blocks, threads_per_block>>>(
-        query.data_ptr<float>(), key.data_ptr<float>(), scores.data_ptr<float>(), seq_len, q_embded_dim);
+        query.data_ptr<float>(), key.data_ptr<float>(), scores.data_ptr<float>(), seq_len, q_embed_dim);
 
     return scores;
 }
