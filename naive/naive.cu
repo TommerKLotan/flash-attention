@@ -2,7 +2,7 @@
 #include <cuda_runtime.h>
 
 #define CEIL_DIV(a, b) (((a) + (b) - 1) / (b))
-#define IND(x, y, cols) ((y) * (cols) + (x))
+#define IND(r, c, cols) ((r) * (cols) + (c))
 __global__ void calc_score_matrix(const float *query, const float *key, float *scores,
                                   int seq_len, int q_embed_dim)
 {
@@ -22,7 +22,7 @@ __global__ void calc_score_matrix(const float *query, const float *key, float *s
     int x = item_offset % seq_len;
     int y = item_offset / seq_len;
     int sum = 0;
-    for (int i = 0; i < q_embed_dim; i ++)
+    for (int i = 0; i < q_embed_dim; i++)
     {
         sum += query_mat[IND(x, i, q_embed_dim)] * key_mat[IND(y, i, q_embed_dim)];
     }
