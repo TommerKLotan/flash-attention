@@ -39,46 +39,46 @@ __global__ void softmax_scores(float *scores, int seq_len)
     __shared__ float sum, max;
 
 
-    // float tmp_max = -INFINITY;
-    // float val;
-    // if (threadIdx.x == 0)
-    // {
-    //     for (int i = 0; i < seq_len; i++)
-    //     {
-    //         val = scores_mat[IND(row, i, seq_len)];
-    //         tmp_max = val > tmp_max ? val : tmp_max;
-    //     }
-    // }
-    // max = tmp_max;
-    // __syncthreads();
+    float tmp_max = -INFINITY;
+    float val;
+    if (threadIdx.x == 0)
+    {
+        for (int i = 0; i < seq_len; i++)
+        {
+            val = scores_mat[IND(row, i, seq_len)];
+            tmp_max = val > tmp_max ? val : tmp_max;
+        }
+    }
+    max = tmp_max;
+    __syncthreads();
 
     int chunk_size = CEIL_DIV(seq_len, blockDim.x);
-    int range_start = chunk_size * blockIdx.x;
+    int range_start = chunk_size * threadIdx.x;
     int range_end = range_start + chunk_size;
     range_end = range_end <= seq_len ? range_end : seq_len;
     
     for (int i = range_start; i < range_end; i++)
     {
-        scores_mat[IND(row, i, seq_len)] = 1;//expf(scores_mat[IND(row, i, seq_len)] - max);
+        scores_mat[IND(row, i, seq_len)] = expf(scores_mat[IND(row, i, seq_len)] - max);
     }
 
-    // __syncthreads();
+    __syncthreads();
 
-    // float tmp_sum = 0;
-    // if (threadIdx.x == 0)
-    // {
-    //     for (int i = 0; i < seq_len; i++)
-    //     {
-    //         tmp_sum += scores_mat[IND(row, i, seq_len)];
-    //     }
-    // }
-    // sum = tmp_sum;
-    // __syncthreads();
+    float tmp_sum = 0;
+    if (threadIdx.x == 0)
+    {
+        for (int i = 0; i < seq_len; i++)
+        {
+            tmp_sum += scores_mat[IND(row, i, seq_len)];
+        }
+    }
+    sum = tmp_sum;
+    __syncthreads();
 
-    // for (int i = range_start; i < range_end; i++)
-    // {
-    //     scores_mat[IND(row, i, seq_len)] = scores_mat[IND(row, i, seq_len)] / sum;
-    // }
+    for (int i = range_start; i < range_end; i++)
+    {
+        scores_mat[IND(row, i, seq_len)] = scores_mat[IND(row, i, seq_len)] / sum;
+    }
 
 }
 
