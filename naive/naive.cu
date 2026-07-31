@@ -103,7 +103,7 @@ __global__ void calc_weighted_values_matrix(const float *scores, const float *va
     {
         sum += scores_mat[IND(x, i, seq_len)] * value_mat[IND(i, y, v_embed_dim)];
     }
-    scores_mat[IND(x, y, v_embed_dim)] = sum;
+    result_mat[IND(x, y, v_embed_dim)] = sum;
 }
 
 torch::Tensor naive_attention(torch::Tensor query, torch::Tensor key, torch::Tensor value)
@@ -127,7 +127,7 @@ torch::Tensor naive_attention(torch::Tensor query, torch::Tensor key, torch::Ten
     dim3 softmax_number_of_blocks(seq_len, batch_size, num_heads);
     softmax_scores<<<softmax_number_of_blocks, softmax_threads_per_block>>>(scores.data_ptr<float>(), seq_len);
 
-    int num_blocks_per_value_mat = CEIL_DIV(seq_len * v_embed_dir, 1024);
+    int num_blocks_per_value_mat = CEIL_DIV(seq_len * v_embed_dim, 1024);
     dim3 values_threads_per_block(1024);
     dim3 values_number_of_blocks(num_blocks_per_value_mat, batch_size, num_heads);
     calc_weighted_values_matrix<<<values_number_of_blocks, values_threads_per_block>>>(scores.data_ptr<float>(), value.data_ptr<float>(), result.data_ptr<float>(), seq_len, v_embed_dim);
