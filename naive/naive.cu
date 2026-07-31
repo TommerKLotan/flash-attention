@@ -11,8 +11,8 @@ __global__ void calc_score_matrix(const float *query, const float *key, float *s
     int num_heads = gridDim.z;
     int start_offset = (batch_ind * num_heads + head_ind) * seq_len * q_embed_dim;
     float (*query_mat)[q_embed_dim] = (float (*)[q_embed_dim])(query + start_offset);
-    float (*key_mat)[q_embed_dim] = key + start_offset;
-    float (*scores_mat)[seq_len] = scores + (batch_ind * num_heads + head_ind) * seq_len * seq_len;
+    float (*key_mat)[q_embed_dim] = (float (*)[q_embed_dim])(key + start_offset);
+    float (*scores_mat)[seq_len] = (float (*)[seq_len])(scores + (batch_ind * num_heads + head_ind) * seq_len * seq_len);
 
     int item_offset = blockIdx.x * blockDim.x + threadIdx.x;
     if (item_offset >= seq_len * seq_len)
