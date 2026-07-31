@@ -39,18 +39,18 @@ __global__ void softmax_scores(float *scores, int seq_len)
     __shared__ float sum, max;
 
 
-    float tmp_max = -INFINITY;
-    float val;
-    if (threadIdx.x == 0)
-    {
-        for (int i = 0; i < seq_len; i++)
-        {
-            val = scores_mat[IND(row, i, seq_len)];
-            tmp_max = val > tmp_max ? val : tmp_max;
-        }
-    }
-    max = tmp_max;
-    __syncthreads();
+    // float tmp_max = -INFINITY;
+    // float val;
+    // if (threadIdx.x == 0)
+    // {
+    //     for (int i = 0; i < seq_len; i++)
+    //     {
+    //         val = scores_mat[IND(row, i, seq_len)];
+    //         tmp_max = val > tmp_max ? val : tmp_max;
+    //     }
+    // }
+    // max = tmp_max;
+    // __syncthreads();
 
     int chunk_size = CEIL_DIV(seq_len, blockDim.x);
     int range_start = chunk_size * blockIdx.x;
@@ -62,23 +62,23 @@ __global__ void softmax_scores(float *scores, int seq_len)
         scores_mat[IND(row, i, seq_len)] = 1;//expf(scores_mat[IND(row, i, seq_len)] - max);
     }
 
-    __syncthreads();
+    // __syncthreads();
 
-    float tmp_sum = 0;
-    if (threadIdx.x == 0)
-    {
-        for (int i = 0; i < seq_len; i++)
-        {
-            tmp_sum += scores_mat[IND(row, i, seq_len)];
-        }
-    }
-    sum = tmp_sum;
-    __syncthreads();
+    // float tmp_sum = 0;
+    // if (threadIdx.x == 0)
+    // {
+    //     for (int i = 0; i < seq_len; i++)
+    //     {
+    //         tmp_sum += scores_mat[IND(row, i, seq_len)];
+    //     }
+    // }
+    // sum = tmp_sum;
+    // __syncthreads();
 
-    for (int i = range_start; i < range_end; i++)
-    {
-        scores_mat[IND(row, i, seq_len)] = scores_mat[IND(row, i, seq_len)] / sum;
-    }
+    // for (int i = range_start; i < range_end; i++)
+    // {
+    //     scores_mat[IND(row, i, seq_len)] = scores_mat[IND(row, i, seq_len)] / sum;
+    // }
 
 }
 
@@ -101,7 +101,7 @@ torch::Tensor naive_attention(torch::Tensor query, torch::Tensor key, torch::Ten
 
     dim3 softmax_threads_per_block(1024);
     dim3 softmax_number_of_blocks(seq_len, batch_size, num_heads);
-    //softmax_scores<<<softmax_number_of_blocks, softmax_threads_per_block>>>(scores.data_ptr<float>(), seq_len);
+    softmax_scores<<<softmax_number_of_blocks, softmax_threads_per_block>>>(scores.data_ptr<float>(), seq_len);
 
     return scores;
 }
