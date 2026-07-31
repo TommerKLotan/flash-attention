@@ -26,7 +26,7 @@ __global__ void calc_score_matrix(const float *query, const float *key, float *s
     {
         sum += query_mat[IND(x, i, q_embed_dim)] * key_mat[IND(y, i, q_embed_dim)];
     }
-    scores_mat[IND(x, y, seq_len)] = sum / sqrt(q_embed_dim);
+    scores_mat[IND(x, y, seq_len)] = sum / sqrtf(q_embed_dim);
 
 }
 
