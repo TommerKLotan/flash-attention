@@ -1,4 +1,5 @@
 #include <torch/extension.h>
+#include <c10/cuda/CUDAException.h>
 #include <cuda_runtime.h>
 
 #define CEIL_DIV(a, b) (((a) + (b) - 1) / (b))
@@ -131,7 +132,7 @@ torch::Tensor naive_attention(torch::Tensor query, torch::Tensor key, torch::Ten
     dim3 values_threads_per_block(1024);
     dim3 values_number_of_blocks(num_blocks_per_value_mat, batch_size, num_heads);
     calc_weighted_values_matrix<<<values_number_of_blocks, values_threads_per_block>>>(scores.data_ptr<float>(), value.data_ptr<float>(), result.data_ptr<float>(), seq_len, v_embed_dim);
-    
+
     C10_CUDA_CHECK(cudaGetLastError());
     return result;
 }
