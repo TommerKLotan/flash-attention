@@ -20,8 +20,8 @@ __global__ void calc_score_matrix(const float *query, const float *key, float *s
     {
         return;
     }
-    size_t x = item_offset % seq_len;
-    size_t y = item_offset / seq_len;
+    size_t y = item_offset % seq_len;
+    size_t x = item_offset / seq_len;
     float sum = 0;
     for (size_t i = 0; i < q_embed_dim; i++)
     {
@@ -97,8 +97,8 @@ __global__ void calc_weighted_values_matrix(const float *scores, const float *va
     {
         return;
     }
-    size_t x = item_offset % seq_len;
-    size_t y = item_offset / seq_len;
+    size_t x = item_offset / v_embed_dim;
+    size_t y = item_offset % v_embed_dim;
     float sum = 0;
     for (size_t i = 0; i < seq_len; i++)
     {
